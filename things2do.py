@@ -26,6 +26,10 @@ def add(task, deadline, priority, remindme, nodelete):
         if arg == '--nodelete':
             no_delete = True
 
+    if priority.lower() not in ['low', 'medium', 'mid', 'high']:
+        click.echo("Invalid priority set.")
+        sys.exit(1)
+
     #handling invalid reminder input because click doesn't check for it
     if reminder is not None:
         try:
@@ -33,10 +37,6 @@ def add(task, deadline, priority, remindme, nodelete):
         except:
             click.echo("Invalid reminder set.")
             sys.exit(1)
-
-    if priority.lower() not in ['low', 'medium', 'mid', 'high']:
-        click.echo("Invalid priority set.")
-        sys.exit(1)
     
     click.echo(f"\nSUMMARY:\nSet task: {task}")
 

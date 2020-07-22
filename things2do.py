@@ -10,8 +10,8 @@ def cli(all):
 @cli.command() #add command
 @click.argument('task')
 @click.option('-d', '--deadline', default=None, help='The deadline for the task.')
-@click.option('-p', '--priority', default='Low', 
-    help='Urgency of the task. Accepted values: Low, Medium, High.')
+@click.option('-p', '--priority', default='low', 
+    help='Urgency of the task, defaults to low. Accepted values: Low, Medium, High.')
 @click.option('-r', '--remindme', default=None, 
     help='Specify a reminder in hours before the deadline.')
 @click.option('--nodelete', default=False, is_flag=True, 
@@ -19,25 +19,31 @@ def cli(all):
 def add(task, deadline, priority, remindme, nodelete):
     #setting internal vars from fxn args
     no_delete = nodelete
+    reminder = remindme
+
+    #if one of the options was left blank, causing click to interpret --nodelete as option's arg
+    for arg in [deadline, priority, remindme]:
+        if arg == '--nodelete':
+            no_delete = True
 
     #handling invalid reminder input because click doesn't check for it
-    try:
-        reminder=int(remindme)
-    except:
-        #if -r was left blank, causing click to interpret --nodelete as -r's input
-        if remindme == '--nodelete':
-            no_delete = True
-        reminder=None
-        click.echo("Invalid reminder set, defaulting to no reminder.")
+    if reminder is not None:
+        try:
+            reminder=int(reminder)
+        except:
+            click.echo("Invalid reminder set.")
+            sys.exit(1)
 
-    if priority.lower() in ['low', 'medium', 'mid', 'high']:
-        click.echo("Invalid priority set, defaulting to low.")
-        priority = 'low'
+    if priority.lower() not in ['low', 'medium', 'mid', 'high']:
+        click.echo("Invalid priority set.")
+        sys.exit(1)
     
     click.echo(f"\nSUMMARY:\nSet task: {task}")
 
-    #logic control for deadline and reminder interrelations
+    #implement input sanitization for deadline (dateutils)
     click.echo(f"Deadline: {deadline}")
+
+    #logic control for deadline and reminder interrelations
     if not reminder:
         click.echo("No reminder set.")
     elif not deadline and reminder:

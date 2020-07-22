@@ -2,34 +2,48 @@ import click
 import sys
 
 @click.group(invoke_without_command=True)
-@click.option('-a', '--all', is_flag=True)
+@click.option('-a', '--all', is_flag=True, help='List all active tasks.')
 def cli(all):
     if all:
         click.echo("Displaying all active tasks.")
 
-@cli.command()
+@cli.command() #add command
 @click.argument('task')
-@click.option('-d', '--deadline', default=None)
-@click.option('-r', '--remindme', default=False, is_flag=True)
-@click.option('--nodelete', default=False, is_flag=True)
+@click.option('-d', '--deadline', default=None, help='The deadline for the task.')
+@click.option('-r', '--remindme', default=None, 
+    help='Specify a reminder in hours before the deadline.')
+@click.option('--nodelete', default=False, is_flag=True, 
+    help='Set this flag to prevent t2d from auto-deleting this task.')
 def add(task, deadline, remindme, nodelete):
-    click.echo(f"Set task: {task}")
+    no_delete = nodelete
+
+    #handling invalid reminder input because click doesn't check for it
+    try:
+        reminder=int(remindme)
+    except:
+        #if -r was left blank, causing click to interpret --nodelete as -r's input
+        if remindme == '--nodelete':
+            no_delete = True
+        reminder=None
+        click.echo("Invalid reminder set, defaulting to no reminder.")
+    
+    click.echo(f"\nSUMMARY:\nSet task: {task}")
 
     #logic control for deadline and reminder interrelations
     click.echo(f"Deadline: {deadline}")
-    if not remindme:
+    if not reminder:
         click.echo("No reminder set.")
-    elif not deadline and remindme:
+    elif not deadline and reminder:
         click.echo("No deadline set, cannot set reminder.")
     else:
-        click.echo(f"Reminder set for {deadline}")
+        click.echo(f"Reminder set for {reminder} hour(s) before deadline")
     
     #logic control for deadline and auto-delete relationship
-    if not deadline and not nodelete:
+    if not deadline and not no_delete:
         click.echo("Warning: This task cannot be auto-deleted as there is no deadline set.")
-    elif not deadline and nodelete:
+    elif not deadline and no_delete:
         click.echo("This task cannot be auto-deleted as there is no deadline set.")
-    elif nodelete and deadline:
+    elif no_delete and deadline:
         click.echo("This task will not be automatically deleted.")
     else:
         click.echo("This task will be automatically deleted when deadline passes.")

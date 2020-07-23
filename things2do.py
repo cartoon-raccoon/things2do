@@ -1,5 +1,6 @@
 import click
 import sys
+from datetime import datetime
 
 @click.group(invoke_without_command=True)
 @click.option('-a', '--all', is_flag=True, help='List all active tasks.')
@@ -9,7 +10,8 @@ def cli(all):
 
 @cli.command() #add command
 @click.argument('task')
-@click.option('-d', '--deadline', default=None, help='The deadline for the task.')
+@click.option('-d', '--deadline', default=None, type=str,
+    help='The deadline for the task. Use DD-MM-YYYY@HH-MM and 24 hour time.')
 @click.option('-p', '--priority', default='low', 
     help='Urgency of the task, defaults to low. Accepted values: Low, Medium, High.')
 @click.option('-r', '--remindme', default=None, 
@@ -25,6 +27,17 @@ def add(task, deadline, priority, remindme, nodelete):
     for arg in [deadline, priority, remindme]:
         if arg == '--nodelete':
             no_delete = True
+
+    deaddate, deadtime = deadline[:9].split('-'), deadline[10:].split('-')
+    try:
+        dline = datetime(int(deaddate[2]), 
+                            int(deaddate[1]), 
+                            int(deaddate[0]), 
+                            hour=int(deadtime[0]),
+                            minute=int(deadtime[1]))
+    except:
+        click.echo("Invalid deadline set.")
+        sys.exit(1)
 
     if priority.lower() not in ['low', 'medium', 'mid', 'high']:
         click.echo("Invalid priority set.")
@@ -44,7 +57,7 @@ def add(task, deadline, priority, remindme, nodelete):
     click.echo(f"\nSUMMARY:\nSet task: {task}")
 
     #implement input sanitization for deadline (dateutils)
-    click.echo(f"Deadline: {deadline}")
+    click.echo(f"Deadline: {dline.date()} at {dline.time()}")
 
     #logic control for deadline and reminder interrelations
     if not reminder:

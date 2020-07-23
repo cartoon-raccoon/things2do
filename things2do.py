@@ -37,6 +37,9 @@ def add(task, deadline, priority, remindme, nodelete):
         except:
             click.echo("Invalid reminder set.")
             sys.exit(1)
+        if reminder < 0:
+            click.echo("Invalid reminder set.")
+            sys.exit(1)
     
     click.echo(f"\nSUMMARY:\nSet task: {task}")
 

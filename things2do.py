@@ -1,5 +1,6 @@
 import click
 import sys
+import backend
 from datetime import datetime
 
 @click.group(invoke_without_command=True)
@@ -28,16 +29,18 @@ def add(task, deadline, priority, remindme, nodelete):
         if arg == '--nodelete':
             no_delete = True
 
-    deaddate, deadtime = deadline[:9].split('-'), deadline[10:].split('-')
-    try:
-        dline = datetime(int(deaddate[2]), 
-                            int(deaddate[1]), 
-                            int(deaddate[0]), 
-                            hour=int(deadtime[0]),
-                            minute=int(deadtime[1]))
-    except:
-        click.echo("Invalid deadline set.")
-        sys.exit(1)
+    dline = None
+    if deadline is not None:
+        deaddate, deadtime = deadline[:10].split('-'), deadline[11:].split('-')
+        try:
+            dline = datetime(int(deaddate[2]), 
+                             int(deaddate[1]), 
+                             int(deaddate[0]), 
+                             hour=int(deadtime[0]),
+                             minute=int(deadtime[1]))
+        except Exception as err:
+            click.echo("Invalid deadline set.")
+            sys.exit(1)
 
     if priority.lower() not in ['low', 'medium', 'mid', 'high']:
         click.echo("Invalid priority set.")
@@ -55,14 +58,16 @@ def add(task, deadline, priority, remindme, nodelete):
             sys.exit(1)
     
     click.echo(f"\nSUMMARY:\nSet task: {task}")
-
-    #implement input sanitization for deadline (dateutils)
-    click.echo(f"Deadline: {dline.date()} at {dline.time()}")
+    if dline is not None:
+        click.echo(f"Deadline: {dline.date()} at {dline.time()}")
+    else:
+        click.echo("No deadline set.")
 
     #logic control for deadline and reminder interrelations
     if not reminder:
         click.echo("No reminder set.")
     elif not deadline and reminder:
+        reminder = None
         click.echo("No deadline set, cannot set reminder.")
     else:
         click.echo(f"Reminder set for {reminder} hour(s) before deadline")
@@ -78,11 +83,21 @@ def add(task, deadline, priority, remindme, nodelete):
         click.echo("This task will not be automatically deleted.")
     else:
         click.echo("This task will be automatically deleted when deadline passes.")
+    
+    result = backend.add_todo(task, dline, priority, reminder, no_delete)
+    if result == 0:
+        click.echo("\nTask successfully added!")
+    elif result == 1:
+        click.echo(f"\nTask '{task}' already exists.")
 
 @cli.command()
 @click.argument('task')
 def remove(task):
-    click.echo(f"Removing task: {task}")
+    if backend.remove_todo(task):
+        click.echo(f"Successfully removed task {task}")
+    else:
+        click.echo(f"Error: task does not exist.")
+        sys.exit(1)
 
 @cli.command()
 @click.argument('task')
@@ -98,4 +113,8 @@ def search(task, regex):
     if regex:
         click.echo(f"Searching for tasks matching regex {task}")
     else:
-        click.echo(f"Searching for task: {task}")
+        result = backend.read_todo(task)
+        if result is not None:
+            click.echo(f"Task: {result[0]} \nDeadline: {result[1]} \nPriority: {result[2]}")
+        else:
+            click.echo("Task not found.")

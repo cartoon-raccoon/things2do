@@ -6,6 +6,7 @@ setup(
     py_modules=['things2do'],
     install_requires=[
         'Click',
+        'Tabulate'
     ],
     entry_points='''
         [console_scripts]

@@ -1,15 +1,31 @@
+import os
 import json
 from datetime import datetime, date, time
 from configparser import ConfigParser
 
-todofile = 'todolist.json'
+todofile = ''
+
+config = ConfigParser()
+if 'config.ini' not in os.listdir("."):
+    pass
+else:
+    pass
+    
+config.read('/home/raccoon/Projects/Things2Do/config.ini')
+todofile = config['General']['filepath']
 
 def add_todo(taskname, deadline, priority, reminder, deleteflag):
+    """ 
+    Writes a single task to the todolist.json file.
+    Accepted params are the options specified in the frontend
+    """
+    autodel()
     task = {
-        'name':taskname,
-        'deadline':str(deadline),
+        'name': taskname,
+        'deadline': str(deadline),
         'priority': priority,
-        'no_del':deleteflag
+        'reminder': reminder,
+        'no_del': deleteflag
     }
 
     if not exists(task['name']):
@@ -22,6 +38,10 @@ def add_todo(taskname, deadline, priority, reminder, deleteflag):
                 return 1
 
 def read_todo(taskname):
+    """
+    Looks for a task with a specified name and returns a list with its attributes
+    """
+    autodel()
     with open(todofile, 'r') as todo:
         for task in todo:
             task = json.loads(task)
@@ -33,8 +53,8 @@ def read_todo(taskname):
 
 def remove_todo(taskname):
     """
-    reads the entire file line by line into a list and deletes the entry
-    rewrites the entire file
+    Reads the entire file line by line into a list and deletes the entry,
+    then rewrites the entire file
     """
     tasks = []
     found = False #track if todo item was found
@@ -53,7 +73,46 @@ def remove_todo(taskname):
     
     return found
 
+def edit_todo(taskname, deadline, reminder, priority, deleteflag):
+    """
+    Edits the task specified by taskname
+    """
+    edit_task = ''
+    editables = ['deadline', 'reminder', 'priority', 'no_del']
+    edited = [deadline, reminder, priority, deleteflag]
+
+    if not exists(taskname):
+        return False
+
+    with open(todofile, 'r') as todo:
+        tasks = todo.readlines()
+        for task in tasks:
+            try:
+                task = json.loads(task)
+                if taskname == task['name']:
+                    edit_task = task
+                    break
+            except json.decoder.JSONDecodeError:
+                return None
+    
+    remove_todo(taskname)
+
+    for i, editable in enumerate(editables):
+        if edited[i] is not None:
+            edit_task[editable] = edited[i]
+
+    with open(todofile, 'a') as todo:
+        try:
+            todo.write(json.dumps(edit_task))
+        except json.decoder.JSONDecodeError:
+            return None
+    return True
+
+
 def exists(taskname):
+    """
+    Checks whether a tasks of that name exists in the todofile
+    """
     with open(todofile, 'r') as todo:
         tasks = todo.readlines()
         for task in tasks:
@@ -66,16 +125,24 @@ def exists(taskname):
         return False
 
 def autodel(): #i hate this code so much
+    """
+    Runs whenever the app is run, deletes any expired tasks
+    """
     today, tasks = datetime.today(), []
     to_remove_indexes = []
+    deleted_tasks = 0
+
     with open(todofile, 'r') as todo:
         tasks = todo.readlines()
         for i, task in enumerate(tasks):
-            task = json.loads(task)
-            dline = task['deadline']
-            dline = datetime.strptime(dline, "%Y-%m-%d %H:%M:%S")
+            try:
+                task = json.loads(task)
+            except json.decoder.JSONDecodeError:
+                return False, False
+            dline = datetime.strptime(task['deadline'], "%Y-%m-%d %H:%M:%S")
             if dline < today and not task['no_del']:
                 to_remove_indexes.append(i)
+                deleted_tasks += 1
 
     for index in to_remove_indexes[::-1]:
         del tasks[index]
@@ -83,25 +150,42 @@ def autodel(): #i hate this code so much
     with open(todofile, 'w') as todo:
         for task in tasks:
             todo.write(task)
+    
+    return deleted_tasks, True
 
 def printall():
+    """
+    Returns a dictionary of all the tasks present in the todofile, sorted by deadline
+    """
     all_tasks = {
         'Name': [],
         'Deadline':[],
         'Priority':[],
-        'No Delete':[]
+        'Autodelete':[]
     }
     with open(todofile, 'r') as todo:
-        tasks = todo.readlines()
+        try: #list compre for loading dict objs in to list, sorting by deadline
+            tasks = sorted([json.loads(task) for task in todo.readlines()], 
+                    key= lambda task: task['deadline'])
+        except json.decoder.JSONDecodeError:
+            return 1
+        if not tasks:
+            return None
         for task in tasks:
-            task = json.loads(task)
             all_tasks['Name'].append(task['name'])
             all_tasks['Deadline'].append(task['deadline'])
             all_tasks['Priority'].append(task['priority'])
-            all_tasks['No Delete'].append(task['no_del'])
+            all_tasks['Autodelete'].append(
+                'No' if task['no_del'] else 'Yes')
     return all_tasks
 
-if __name__ =='__main__':
+def config_exists(): #this is a stupid function idk why i wrote this
+    return False if 'config.ini' not in os.listdir(".") else True
+
+def setup():
+    pass
+
+if __name__ == '__main__':
     # add_todo('sleep', 'today', 'low', 5, True)
     # add_todo('commit suicide', 'today', 'high', 2, False)
     # read_todo('sleep')
@@ -110,4 +194,5 @@ if __name__ =='__main__':
     # now = datetime.now()
     # day = date(2020, 10, 27)
     #today = date.today()
-    printall()
+    print(config_exists())
+    print(config['General']['filepath'])

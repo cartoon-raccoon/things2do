@@ -5,12 +5,25 @@ from tabulate import tabulate
 import backend
 
 @click.group(invoke_without_command=True)
+@click.pass_context
 #@click.option('-a', '--all', is_flag=True, help='List all active tasks.')
-def cli():
-    click.echo("Displaying all active tasks:")
-    backend.autodel()
-    tasks = backend.printall()
-    print(tabulate(tasks, headers="keys"))
+def cli(ctx):
+    if ctx.invoked_subcommand is None:
+        deleted, success = backend.autodel()
+        if not success:
+            click.echo("ERROR: autodelete failed.")
+            sys.exit(1)
+        tasks = backend.printall()
+        if tasks is None:
+            click.echo("No tasks to display.")
+            sys.exit(0)
+        elif tasks == 1:
+            click.echo("An error occurred while reading tasks from the file.")
+            sys.exit(1)
+        if deleted:
+            click.echo(f"{deleted} task(s) were auto-deleted.\n")
+        click.echo("Displaying all active tasks:\n")
+        print(tabulate(tasks, headers="keys"))
 
 @cli.command() #add command
 @click.argument('task')
@@ -97,20 +110,25 @@ def add(task, deadline, priority, remindme, nodelete):
         click.echo(f"\nAn error occurred. Please check if the task was added or try again.")
         sys.exit(1)
     
-
 @cli.command()
 @click.argument('task')
 def remove(task):
     if backend.remove_todo(task):
         click.echo(f"Successfully removed task: {task}")
     else:
-        click.echo(f"Error: task does not exist.")
+        click.echo("Error: task does not exist.")
         sys.exit(1)
 
 @cli.command()
 @click.argument('task')
+@click.option('-d', '--deadline', default=None, type=str,
+                help="Edits the deadline for the specified task.")
+@click.option('-p', '--priority', default=None,
+                help="Edits the priority for the task.")
+@click.option('-r', '--remindme', default=None,
+                help="Edits the reminder if not already set.")
 #what options needed for edit?
-def edit(task):
+def edit(task, deadline, priority, remindme, ):
     click.echo(f'Editing task: {task}')
 
 @cli.command()

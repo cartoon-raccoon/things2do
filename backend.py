@@ -34,7 +34,7 @@ def add_todo(taskname, deadline, priority, reminder, deleteflag):
                 jdump = json.dumps(task) + '\n'
                 todo.write(jdump)
                 return 0
-            except:
+            except json.decoder.JSONDecodeError:
                 return 1
 
 def read_todo(taskname):
@@ -48,7 +48,9 @@ def read_todo(taskname):
             if taskname in task['name']:
                 return [task['name'], 
                         task['deadline'], 
-                        task['priority']]
+                        task['priority'],
+                        task['reminder'],
+                        task['no_del']]
         return None
 
 def remove_todo(taskname):
@@ -97,13 +99,21 @@ def edit_todo(taskname, deadline, reminder, priority, deleteflag):
     
     remove_todo(taskname)
 
+    #editing the tasks here
     for i, editable in enumerate(editables):
         if edited[i] is not None:
-            edit_task[editable] = edited[i]
+            if edited[i] == "remove":
+                edit_task[editable] = None
+            else:
+                edit_task[editable] = edited[i]
+
+    #making the task deadline json-serializable
+    edit_task['deadline'] = str(edit_task['deadline'])
 
     with open(todofile, 'a') as todo:
         try:
-            todo.write(json.dumps(edit_task))
+            jdump = json.dumps(edit_task) + '\n'
+            todo.write(jdump)
         except json.decoder.JSONDecodeError:
             return None
     return True
@@ -139,6 +149,8 @@ def autodel(): #i hate this code so much
                 task = json.loads(task)
             except json.decoder.JSONDecodeError:
                 return False, False
+            if task['deadline'] == "None": #because i converted to string in adding
+                continue
             dline = datetime.strptime(task['deadline'], "%Y-%m-%d %H:%M:%S")
             if dline < today and not task['no_del']:
                 to_remove_indexes.append(i)
@@ -185,7 +197,7 @@ def config_exists(): #this is a stupid function idk why i wrote this
 def setup():
     pass
 
-if __name__ == '__main__':
+if __name__ == '__main__': #test code
     # add_todo('sleep', 'today', 'low', 5, True)
     # add_todo('commit suicide', 'today', 'high', 2, False)
     # read_todo('sleep')
@@ -194,5 +206,4 @@ if __name__ == '__main__':
     # now = datetime.now()
     # day = date(2020, 10, 27)
     #today = date.today()
-    print(config_exists())
-    print(config['General']['filepath'])
+    autodel()

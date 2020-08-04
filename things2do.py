@@ -150,6 +150,18 @@ def edit(task, deadline, priority, remindme):
         no_delete = True
     #TODO: Factor this out into a separate function to be called by this and add()
     dline = None
+    if remindme is not None and remindme != 'remove':
+        try:
+            remindme = int(remindme)
+        except:
+            click.echo("Invalid reminder set.")
+    if priority is not None:
+        if priority == 'remove':
+            click.echo("Priority defaulting to low.")
+            priority = 'low'
+        if priority.lower() not in ['low', 'medium', 'mid', 'high']:
+            click.echo("Invalid priority set.")
+            sys.exit(1)
     if deadline != 'remove' and deadline is not None:
         if deadline[0:5] == 'today':
             deadline = deadline.replace('today', 
